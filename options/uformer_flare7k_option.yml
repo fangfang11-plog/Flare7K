@@ -10,11 +10,11 @@ datasets:
   train:
     name: Flare7K
     type: Flare_Pair_Loader
-    image_path: dataset/Flickr24K
+    image_path: ../dataset/Flickr24K
     scattering_dict:
-      Flare7K_scattering: dataset/Flare7k/Scattering_Flare/Compound_Flare
+      Flare7K_scattering: ../dataset/Flare7k/Scattering_Flare/Compound_Flare
     reflective_dict:
-      Flare7K_reflective: dataset/Flare7k/Reflective_Flare
+      Flare7K_reflective: ../dataset/Flare7k/Reflective_Flare
     transform_base:
       img_size: 512
     transform_flare:
@@ -35,8 +35,8 @@ datasets:
   val:
     name: flare_test
     type: Image_Pair_Loader
-    dataroot_gt: dataset/Flare7k/valid/gt
-    dataroot_lq: dataset/Flare7k/valid/input
+    dataroot_gt: ../dataset/Flare7k/valid/gt
+    dataroot_lq: ../dataset/Flare7k/valid/input
     gt_size: 512
 
 # network structures

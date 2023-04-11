@@ -141,4 +141,4 @@ def blend_light_source(input_scene, pred_scene,threshold=0.99,luminance_mode=Fal
         blend = input_scene * mask_rgb + pred_scene * (1 - mask_rgb)
     else:
         blend = pred_scene
-    return blend
+    return blend,mask_rgb

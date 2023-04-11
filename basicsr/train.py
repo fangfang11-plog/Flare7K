@@ -4,6 +4,8 @@ import math
 import time
 import torch
 from os import path as osp
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.data.data_sampler import EnlargedSampler
@@ -212,4 +214,5 @@ def train_pipeline(root_path):
 
 if __name__ == '__main__':
     root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
+    print(root_path)
     train_pipeline(root_path)
