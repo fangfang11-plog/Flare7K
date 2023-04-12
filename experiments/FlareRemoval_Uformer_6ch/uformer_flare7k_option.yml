@@ -1,12 +1,12 @@
-# GENERATE TIME: Wed Apr 12 12:37:49 2023
+# GENERATE TIME: Wed Apr 12 09:25:28 2023
 # CMD:
-# D:/data/tunnel/Flare/basicsr/train.py
+# basicsr/train.py -opt options/uformer_flare7k_option.yml
 
 # general settings
 name: FlareRemoval_Uformer_6ch
 model_type: DeflareModel
 scale: 1
-num_gpu: 1  # set num_gpu: 0 for cpu mode
+num_gpu: 2  # set num_gpu: 0 for cpu mode
 manual_seed: 0
 
 # dataset and data loader settings
@@ -14,11 +14,11 @@ datasets:
   train:
     name: Flare7K
     type: Flare_Pair_Loader
-    image_path: ../dataset/Flickr24K
+    image_path: dataset/Flickr24K
     scattering_dict:
-      Flare7K_scattering: ../dataset/Flare7k/Scattering_Flare/Compound_Flare
+      Flare7K_scattering: dataset/Flare7k/Scattering_Flare/Compound_Flare
     reflective_dict:
-      Flare7K_reflective: ../dataset/Flare7k/Reflective_Flare
+      Flare7K_reflective: dataset/Flare7k/Reflective_Flare
     transform_base:
       img_size: 512
     transform_flare:
@@ -31,7 +31,7 @@ datasets:
     # data loader
     use_shuffle: true
     num_worker_per_gpu: 4
-    batch_size_per_gpu: 2
+    batch_size_per_gpu: 1
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
 
@@ -39,8 +39,8 @@ datasets:
   val:
     name: flare_test
     type: Image_Pair_Loader
-    dataroot_gt: ../dataset/Flare7k/valid/gt
-    dataroot_lq: ../dataset/Flare7k/valid/input
+    dataroot_gt: dataset/Flare7k/valid/gt
+    dataroot_lq: dataset/Flare7k/valid/input
     gt_size: 512
 
 # network structures
