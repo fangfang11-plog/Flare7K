@@ -114,6 +114,7 @@ class DeflareModel(SRModel):
             with torch.no_grad():
                 self.output = self.net_g(self.lq)
         if self.output_ch==6:
+            self.gamma = torch.Tensor([2.2])
             self.deflare,self.flare_hat,self.merge_hat=predict_flare_from_6_channel(self.output,self.gamma)
         elif self.output_ch==3:
             self.mask=torch.zeros_like(self.lq).cuda() # Comment this line if you want to use the mask
@@ -211,7 +212,7 @@ class DeflareModel(SRModel):
     def get_current_visuals(self):
         out_dict = OrderedDict()
         out_dict['lq'] = self.lq.detach().cpu()
-        self.blend= blend_light_source(self.lq, self.deflare, 0.97)
+        self.blend = blend_light_source(self.lq, self.deflare, 0.97)
         out_dict['result']= self.blend.detach().cpu()
         out_dict['flare']=self.flare_hat.detach().cpu()
         if hasattr(self, 'gt'):

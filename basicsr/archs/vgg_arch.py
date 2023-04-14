@@ -159,3 +159,6 @@ class VGGFeatureExtractor(nn.Module):
                 output[key] = x.clone()
 
         return output
+
+
+feature_extractor = VGGFeatureExtractor(layer_name_list=['relu1_1'])

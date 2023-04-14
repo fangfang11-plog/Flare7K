@@ -5,7 +5,7 @@ import time
 import torch
 from os import path as osp
 import os
-#os.environ['CUDA_VISIBLE_DEVICES']='2,3'
+#os.environ['CUDA_VISIBLE_S']='2,3'
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import sys
 sys.path.append('/home/fanglihuang/workspace/data/Flare7K')
@@ -86,8 +86,8 @@ def load_resume_state(opt):
     if resume_state_path is None:
         resume_state = None
     else:
-        device_id = torch.cuda.current_device()
-        resume_state = torch.load(resume_state_path, map_location=lambda storage, loc: storage.cuda(device_id))
+        _id = torch.cuda.current_()
+        resume_state = torch.load(resume_state_path, map_location=lambda storage, loc: storage.cuda(_id))
         check_resume(opt, resume_state['iter'])
     return resume_state
 
@@ -156,38 +156,38 @@ def train_pipeline(root_path):
     start_time = time.time()
 
     for epoch in range(start_epoch, total_epochs + 1):
-        train_sampler.set_epoch(epoch)
-        prefetcher.reset()
-        train_data = prefetcher.next()
-
-        while train_data is not None:
-            data_timer.record()
-
-            current_iter += 1
-            if current_iter > total_iters:
-                break
-            # update learning rate
-            model.update_learning_rate(current_iter, warmup_iter=opt['train'].get('warmup_iter', -1))
-            # training
-            model.feed_data(train_data)
-            model.optimize_parameters(current_iter)
-            iter_timer.record()
-            if current_iter == 1:
-                # reset start time in msg_logger for more accurate eta_time
-                # not work in resume mode
-                msg_logger.reset_start_time()
-            # log
-            if current_iter % opt['logger']['print_freq'] == 0:
-                log_vars = {'epoch': epoch, 'iter': current_iter}
-                log_vars.update({'lrs': model.get_current_learning_rate()})
-                log_vars.update({'time': iter_timer.get_avg_time(), 'data_time': data_timer.get_avg_time()})
-                log_vars.update(model.get_current_log())
-                msg_logger(log_vars)
-
-            # save models and training states
-            if current_iter % opt['logger']['save_checkpoint_freq'] == 0:
-                logger.info('Saving models and training states.')
-                model.save(epoch, current_iter)
+        # train_sampler.set_epoch(epoch)
+        # prefetcher.reset()
+        # train_data = prefetcher.next()
+        #
+        # while train_data is not None:
+        #     data_timer.record()
+        #
+        #     current_iter += 1
+        #     if current_iter > total_iters:
+        #         break
+        #     # update learning rate
+        #     model.update_learning_rate(current_iter, warmup_iter=opt['train'].get('warmup_iter', -1))
+        #     # training
+        #     model.feed_data(train_data)
+        #     model.optimize_parameters(current_iter)
+        #     iter_timer.record()
+        #     if current_iter == 1:
+        #         # reset start time in msg_logger for more accurate eta_time
+        #         # not work in resume mode
+        #         msg_logger.reset_start_time()
+        #     # log
+        #     if current_iter % opt['logger']['print_freq'] == 0:
+        #         log_vars = {'epoch': epoch, 'iter': current_iter}
+        #         log_vars.update({'lrs': model.get_current_learning_rate()})
+        #         log_vars.update({'time': iter_timer.get_avg_time(), 'data_time': data_timer.get_avg_time()})
+        #         log_vars.update(model.get_current_log())
+        #         msg_logger(log_vars)
+        #
+        #     # save models and training states
+        #     if current_iter % opt['logger']['save_checkpoint_freq'] == 0:
+        #         logger.info('Saving models and training states.')
+        #         model.save(epoch, current_iter)
 
             # validation
             if opt.get('val') is not None and (current_iter % opt['val']['val_freq'] == 0):

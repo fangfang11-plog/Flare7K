@@ -116,7 +116,7 @@ def refine_mask(mask, morph_size = 0.01):
   opened = morphology.binary_opening(mask, kernel)
   return opened
 
-def blend_light_source(input_scene, pred_scene,threshold=0.99,luminance_mode=False):
+def  blend_light_source(input_scene, pred_scene,threshold=0.99,luminance_mode=False):
     binary_mask = (get_highlight_mask(input_scene,threshold=threshold,luminance_mode=luminance_mode) > 0.5).to("cpu", torch.bool)
     binary_mask = binary_mask.squeeze()  # (h, w)
     binary_mask = binary_mask.numpy()
@@ -141,4 +141,4 @@ def blend_light_source(input_scene, pred_scene,threshold=0.99,luminance_mode=Fal
         blend = input_scene * mask_rgb + pred_scene * (1 - mask_rgb)
     else:
         blend = pred_scene
-    return blend,mask_rgb
+    return blend

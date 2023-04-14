@@ -19,6 +19,20 @@ def darkchannel(Image):             #计算每个通道中的最小值，输入I
           img[i][j][c] = min_rgb
     return img
 
+def light_channel(Image):
+    rows,cols,channels=Image.shape
+    img=np.array(Image)
+    for i in range(0,rows-1):
+        for j in range(0,cols-1):
+            max_rgb = Image[i][j][0]
+            if max_rgb  < Image[i][j][1]:
+                max_rgb = Image[i][j][1]
+            elif max_rgb  < Image[i][j][2]:
+                max_rgb = Image[i][j][2]
+            for c in range(channels):
+              img[i][j][c] = max_rgb
+    return img
+
 def min_filter(Image,r):                # 最小值滤波，输入最小值图像，在2*r+1的矩形窗口内寻找最小值
     rows, cols, channels = Image.shape    # 输出为暗通道图像
     img = np.array(Image)
@@ -37,6 +51,7 @@ def min_filter(Image,r):                # 最小值滤波，输入最小值图�
                   min = Image[m][n][c]
             img[i][j][c] = min
     return img
+
 
 def guided_filter(Image,p,r,eps):     # 基于导向滤波进行暗通道图像的变换
     #Image归一化之后的原图，p最小值图像，r导向滤波搜索范围，eps为惩罚项，输出导向滤波后的图像
@@ -87,16 +102,44 @@ def repair(Image,t,A):
           t[i][j][c] = t[i][j][c]-0.25 # 不知道为什么这里减掉0.25效果才比较好
           J[i][j][c] = (Image[i][j][c]-A/255.0)/t[i][j][c]+A/255.0
     return J
-# img = cv.imread('../result/test_images/Uformer/blend/00000_blend.png')
-img = cv.imread('D:\\data\\tunnel\\Flare\\test_ours\\20230412122827.png')
+
+def get_flare(Image,threshold):
+    rows,cols,channels= Image.shape
+    J = np.zeros(Image.shape)
+    for i in range(0,rows):
+        for j in range(0,cols):
+            for k in range(0,channels):
+                if Image[i][j][k] > threshold:
+                    J[i][j][k] = Image[i][j][k]
+    return J
+
+def del_flare(threshold_Image,Image):
+    rows,cols,channels= Image.shape
+    result_image = np.zeros(Image.shape)
+    for i in range(0,rows):
+        for j in range(0,cols):
+            for k in range(0,channels):
+                if threshold_Image[i][j][k] > 0:
+                    result_image[i][j][k]= Image[i][j][k] = 0
+                else:
+                    result_image[i][j][k]= Image[i][j][k]
+    return result_image
+
+# img = cv.imread('../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer/glare_000007.png')
+img = cv.imread('../result/test_images/Uformer/input/00001_input.png')
+# img = cv.imread('D:\\data\\tunnel\\Flare\\test_ours\\20230412122827.png')
 img_arr=np.array(img/255.0)                     #归一化
 img_min=darkchannel(img_arr)         #计算每个通道的最小值
 img_dark=min_filter(img_min,2)       #计算暗通道图像
 img_guided=guided_filter(img_arr,img_min,r=75,eps=0.001)
 t,A=select_bright(img_min,img,w=0.95,t0=0.1,V=img_guided)
 dehaze=repair(img_arr,t,A)
+dark_dehaze=darkchannel(dehaze)
 cv.imshow('Origin',img)
-cv.imshow('darkchannel',img_dark[:,:,0])
+cv.imshow('arr',img_arr)
+cv.imshow('darkchannel',img_min)
+cv.imshow('dark',img_dark)
 cv.imshow('dehaze',dehaze)
+cv.imshow('dehaze_dark',dark_dehaze)
 cv.waitKey()
 cv.destroyAllWindows()
