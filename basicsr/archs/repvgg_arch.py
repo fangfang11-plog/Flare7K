@@ -1,4 +1,7 @@
 import os
+
+from basicsr.archs.se_block import SEBlock
+
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import torch
 import torch.nn as nn
@@ -51,10 +54,12 @@ class RepVGGBlock(nn.Module):
 
         self.nonlinearity = nn.ReLU()
 
-        # if use_se:
-        #     #   Note that RepVGG-D2se uses SE before nonlinearity. But RepVGGplus models uses SE after nonlinearity.
-        #     self.se = SEBlock(out_channels, internal_neurons=out_channels // 16)
-        # else:
+        if use_se:
+            #   Note that RepVGG-D2se uses SE before nonlinearity. But RepVGGplus models uses SE after nonlinearity.
+            self.se = SEBlock(out_channels, internal_neurons=out_channels // 16)
+        else:
+            self.se = nn.Identity()
+
         self.se = nn.Identity()
 
         if deploy:

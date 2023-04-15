@@ -48,6 +48,7 @@ network_g:
   output_ch: 6
   width_multiplier: [1, 1, 1, 1]
   num_blocks: [2, 4, 14, 1,1]
+  use_se: true
 # path
 path:
   pretrain_network_g: ~
