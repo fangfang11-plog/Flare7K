@@ -1,3 +1,5 @@
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
@@ -165,7 +167,7 @@ class RepVGGBlock(nn.Module):
 @ARCH_REGISTRY.register()
 class RepVGG(nn.Module):
 
-    def __init__(self, num_blocks, num_classes=1000, width_multiplier=None, override_groups_map=None, deploy=False, use_se=False, use_checkpoint=False):
+    def __init__(self,num_blocks, width_multiplier=None, override_groups_map=None, deploy=False, use_se=False, use_checkpoint=False,img_size=512,img_ch=3,output_ch=3):
         super(RepVGG, self).__init__()
         assert len(width_multiplier) == 4
         self.deploy = deploy
@@ -175,14 +177,16 @@ class RepVGG(nn.Module):
         self.use_checkpoint = use_checkpoint
 
         self.in_planes = min(64, int(64 * width_multiplier[0]))
-        self.stage0 = RepVGGBlock(in_channels=3, out_channels=self.in_planes, kernel_size=3, stride=2, padding=1, deploy=self.deploy, use_se=self.use_se)
+        self.stage0 = RepVGGBlock(in_channels=3, out_channels=self.in_planes, kernel_size=3, stride=1, padding=1, deploy=self.deploy, use_se=self.use_se)
         self.cur_layer_idx = 1
-        self.stage1 = self._make_stage(int(64 * width_multiplier[0]), num_blocks[0], stride=2)
-        self.stage2 = self._make_stage(int(128 * width_multiplier[1]), num_blocks[1], stride=2)
-        self.stage3 = self._make_stage(int(256 * width_multiplier[2]), num_blocks[2], stride=2)
-        self.stage4 = self._make_stage(int(512 * width_multiplier[3]), num_blocks[3], stride=2)
-        self.gap = nn.AdaptiveAvgPool2d(output_size=1)
-        self.linear = nn.Linear(int(512 * width_multiplier[3]), num_classes)
+        self.stage1 = self._make_stage(int(64 * width_multiplier[0]), num_blocks[0], stride=1)
+        # self.stage2 = self._make_stage(int(128 * width_multiplier[1]), num_blocks[1], stride=1)
+        # self.stage3 = self._make_stage(int(256 * width_multiplier[2]), num_blocks[2], stride=1)
+        # self.stage4 = self._make_stage(int(512 * width_multiplier[3]), num_blocks[3], stride=1)
+        self.stage2 = self._make_stage(int(64 * width_multiplier[1]),num_blocks[1],stride=1)
+        self.stage3 = self._make_stage(int(64 * width_multiplier[1]),num_blocks[2],stride=1)
+        self.stage4 = self._make_stage(int(64 * width_multiplier[1]),num_blocks[3],stride=1)
+        self.stage5 = self._make_stage(6,num_blocks[0] - 1,stride=1)
 
     def _make_stage(self, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -196,11 +200,143 @@ class RepVGG(nn.Module):
         return nn.ModuleList(blocks)
 
     def forward(self, x):
+        _,channels,width,height = x.shape
+        dark = torch.max(x,1,keepdim=True)[0]
+        img_tensor_3c = torch.stack([dark[0], dark[0], dark[0]], dim=1)
+        x = img_tensor_3c
         out = self.stage0(x)
-        for stage in (self.stage1, self.stage2, self.stage3, self.stage4):
+        for stage in (self.stage1, self.stage2, self.stage3, self.stage4,self.stage5):
             for block in stage:
                 if self.use_checkpoint:
                     out = checkpoint.checkpoint(block, out)
                 else:
                     out = block(out)
-        return out
+        return out,img_tensor_3c
+
+
+
+# setting
+optional_groupwise_layers = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26]
+g2_map = {l: 2 for l in optional_groupwise_layers}
+g4_map = {l: 4 for l in optional_groupwise_layers}
+
+# def create_RepVGG_A0(deploy=False, use_checkpoint=False):
+#     return RepVGG(num_blocks=[2, 4, 14, 1],
+#                   width_multiplier=[0.75, 0.75, 0.75, 2.5], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+def create_RepVGG_A0(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[2, 4, 14, 1,1],
+                  width_multiplier=[1, 1, 1, 1], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_A1(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[2, 4, 14, 1],
+                  width_multiplier=[1, 1, 1, 2.5], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_A2(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[2, 4, 14, 1],
+                  width_multiplier=[1.5, 1.5, 1.5, 2.75], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B0(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[1, 1, 1, 2.5], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B1(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[2, 2, 2, 4], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B1g2(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[2, 2, 2, 4], override_groups_map=g2_map, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B1g4(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[2, 2, 2, 4], override_groups_map=g4_map, deploy=deploy, use_checkpoint=use_checkpoint)
+
+
+def create_RepVGG_B2(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[2.5, 2.5, 2.5, 5], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B2g2(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[2.5, 2.5, 2.5, 5], override_groups_map=g2_map, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B2g4(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[2.5, 2.5, 2.5, 5], override_groups_map=g4_map, deploy=deploy, use_checkpoint=use_checkpoint)
+
+
+def create_RepVGG_B3(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[3, 3, 3, 5], override_groups_map=None, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B3g2(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[3, 3, 3, 5], override_groups_map=g2_map, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_B3g4(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[4, 6, 16, 1],
+                  width_multiplier=[3, 3, 3, 5], override_groups_map=g4_map, deploy=deploy, use_checkpoint=use_checkpoint)
+
+def create_RepVGG_D2se(deploy=False, use_checkpoint=False):
+    return RepVGG(num_blocks=[8, 14, 24, 1],
+                  width_multiplier=[2.5, 2.5, 2.5, 5], override_groups_map=None, deploy=deploy, use_se=True, use_checkpoint=use_checkpoint)
+
+
+func_dict = {
+'RepVGG-A0': create_RepVGG_A0,
+'RepVGG-A1': create_RepVGG_A1,
+'RepVGG-A2': create_RepVGG_A2,
+'RepVGG-B0': create_RepVGG_B0,
+'RepVGG-B1': create_RepVGG_B1,
+'RepVGG-B1g2': create_RepVGG_B1g2,
+'RepVGG-B1g4': create_RepVGG_B1g4,
+'RepVGG-B2': create_RepVGG_B2,
+'RepVGG-B2g2': create_RepVGG_B2g2,
+'RepVGG-B2g4': create_RepVGG_B2g4,
+'RepVGG-B3': create_RepVGG_B3,
+'RepVGG-B3g2': create_RepVGG_B3g2,
+'RepVGG-B3g4': create_RepVGG_B3g4,
+'RepVGG-D2se': create_RepVGG_D2se,      #   Updated at April 25, 2021. This is not reported in the CVPR paper.
+}
+def get_RepVGG_func_by_name(name):
+    return func_dict[name]
+
+def repvgg_model_convert(model:torch.nn.Module, save_path=None, do_copy=True):
+    if do_copy:
+        model = copy.deepcopy(model)
+    for module in model.modules():
+        if hasattr(module, 'switch_to_deploy'):
+            module.switch_to_deploy()
+    if save_path is not None:
+        torch.save(model.state_dict(), save_path)
+    return model
+
+repvgg_a0 = get_RepVGG_func_by_name('RepVGG-A0')()
+print(repvgg_a0)
+import torchvision.transforms as transforms
+import cv2 as cv
+import sys
+import matplotlib.pyplot as plt
+sys.path.append('D:\\data\\tunnel\\Flare')
+img = cv.imread('D:\\data\\tunnel\\Flare\\test\\test_images\\input1.png')
+print(img.shape)   # numpy数组格式为（H,W,C）
+
+transf = transforms.ToTensor()
+img_tensor = transf(img).unsqueeze(0)  # tensor数据格式是torch(C,H,W)
+print(img_tensor.size())
+
+out,dark= repvgg_a0(img_tensor)
+# cv.imshow('out',out_numpy)
+# cv.waitkeys(0)
+# cv.destroy
+out = out.squeeze(0)
+dark = dark.squeeze(0)
+
+plt.subplots(3,1)
+plt.subplot(3,1,1)
+plt.imshow(out.detach().permute(1,2,0)[:,:,:3])
+plt.subplot(3,1,2)
+plt.imshow(out.detach().permute(1,2,0)[:,:,3:])
+plt.subplot(3,1,3)
+plt.imshow(dark.detach().permute(1,2,0))
+plt.show()

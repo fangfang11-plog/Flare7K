@@ -14,9 +14,9 @@ transform_flare=transforms.Compose([transforms.RandomAffine(degrees=(0,360),scal
 							  transforms.RandomVerticalFlip()
                               ])
 
-flare_image_loader=Flare_Image_Loader('Flickr24K',transform_base,transform_flare)
-flare_image_loader.load_scattering_flare('Flare7K','Flare7k/Scattering_Flare/Compound_Flare')
-flare_image_loader.load_reflective_flare('Flare7K','Flare7k/Reflective_Flare')
+flare_image_loader=Flare_Image_Loader('dataset/Flickr24K',transform_base,transform_flare)
+flare_image_loader.load_scattering_flare('Flare7K','dataset/Flare7k/Scattering_Flare/Compound_Flare')
+flare_image_loader.load_reflective_flare('Flare7K','dataset/Flare7k/Reflective_Flare')
 img_index=2
 test_base_img,test_flare_img,test_merge_img,flare_mask=flare_image_loader[img_index]
 plt.subplots(2,2)

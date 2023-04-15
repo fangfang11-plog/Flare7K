@@ -50,7 +50,7 @@ def adjust_gamma_reverse(image: torch.Tensor, gamma):
     out= torch.clamp(image, 0.0, 1.0)
     return out
 
-def predict_flare_from_6_channel(input_tensor,gamma):
+def  predict_flare_from_6_channel(input_tensor,gamma):
     #the input is a tensor in [B,C,H,W], the C here is 6
 
     deflare_img=input_tensor[:,:3,:,:]

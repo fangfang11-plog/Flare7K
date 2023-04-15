@@ -62,6 +62,7 @@ class DeflareModel(SRModel):
 
     def optimize_parameters(self, current_iter):
         self.optimizer_g.zero_grad()
+        print(self.net_g)
         self.output = self.net_g(self.lq)
         
         if self.output_ch==6:

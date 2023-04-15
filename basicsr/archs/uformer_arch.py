@@ -2213,6 +2213,7 @@ class Uformer_singlescale(nn.Module):
 
 if __name__ == "__main__":
     arch = Uformer
+
     input_size = 256
     # arch = Uformer_Cross
     depths=[2, 2, 2, 2, 2, 2, 2, 2, 2]

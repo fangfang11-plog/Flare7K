@@ -37,7 +37,7 @@ class up_conv(nn.Module):
         x = self.up(x)
         return x
 
-@ARCH_REGISTRY.register()
+# @ARCH_REGISTRY.register()
 class U_Net(nn.Module):
     def __init__(self,img_ch=1,output_ch=2,multi_stage=False):
         super(U_Net,self).__init__()
@@ -127,3 +127,6 @@ class U_Net(nn.Module):
         d1 = self.Conv_1x1(d2)
         d1 = self.activation(d1)
         return d1
+
+unet = U_Net()
+print(unet)
