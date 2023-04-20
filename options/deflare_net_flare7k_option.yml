@@ -1,9 +1,5 @@
-# GENERATE TIME: Thu Apr 20 22:01:31 2023
-# CMD:
-# D:/data/tunnel/Flare/basicsr/train.py
-
 # general settings
-name: FlareRemoval_RepVGG_6ch
+name: FlareRemoval_DeflareNet_6ch
 model_type: DeflareModel
 scale: 1
 num_gpu: 1  # set num_gpu: 0 for cpu mode

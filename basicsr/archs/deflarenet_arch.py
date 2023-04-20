@@ -183,13 +183,13 @@ class ExpansionConvNet(nn.Module):
         adjust_out = enhance_contrast(out)
         return adjust_out
 
-# @ARCH_REGISTRY.register()
+@ARCH_REGISTRY.register()
 class DeflareNet(nn.Module):
     def __init__(self,img_size=512, img_ch=3, output_ch=6, use_se=False):
         super(DeflareNet, self).__init__()
         self.diff_conv = ExpansionConvNet(img_size=512,img_ch=3,output_ch=3,use_se=False)
 
-        self.resnet18 = ResNet18()
+        self.resnet18 = ResNet18(output_ch=6)
 
     def forward(self,diff,x):
         # 差异通道卷积
@@ -203,46 +203,49 @@ class DeflareNet(nn.Module):
 
         return output
 
-if __name__ == "__main__":
-    arch = DeflareNet()
-
-    print(arch)
-
-    import torchvision.transforms as transforms
-    import cv2 as cv
-    import sys
-    import matplotlib.pyplot as plt
-    import torch.nn.functional as F
-
-
-    sys.path.append('D:\\data\\tunnel\\Flare')
-    img = cv.imread('D:\\data\\tunnel\\Flare\\test\\test_images\\input1.png')
-
-    # 获取原图
-    transf = transforms.ToTensor()
-    gray_transform = transforms.Grayscale()
-    img_tensor = transf(img).unsqueeze(0)  # tensor数据格式是torch(C,H,W)
-
-    # 获取差别图
-    img_min=darkchannel(img) * 0.8     #计算每个通道的最小值
-    img_max=light_channel(img) * 1.2
-    diff = img_max - img_min
-    diff_tensor = transf(diff).float().unsqueeze(0) /255
-    diff_tensor = enhance_contrast(diff_tensor)
-
-    output = arch(diff_tensor,img_tensor)
-
-    img_tensor = img_tensor.squeeze(0)
-    diff_tensor = diff_tensor.squeeze(0)
-    output = output.squeeze(0)
-
-    plt.subplots(3,1)
-
-    plt.subplot(3,1,1)
-    plt.imshow(img_tensor.detach().permute(1,2,0))
-    plt.subplot(3,1,2)
-    plt.imshow(diff_tensor.detach().permute(1,2,0))
-    plt.subplot(3,1,3)
-    plt.imshow(output.detach().permute(1,2,0))
-
-    plt.show()
+# if __name__ == "__main__":
+#     arch = DeflareNet()
+#
+#     print(arch)
+#
+#     import torchvision.transforms as transforms
+#     import cv2 as cv
+#     import sys
+#     import matplotlib.pyplot as plt
+#     import torch.nn.functional as F
+#
+#
+#     sys.path.append('D:\\data\\tunnel\\Flare')
+#     img = cv.imread('D:\\data\\tunnel\\Flare\\test\\test_images\\input1.png')
+#
+#     # 获取原图
+#     transf = transforms.ToTensor()
+#     gray_transform = transforms.Grayscale()
+#     img_tensor = transf(img).unsqueeze(0)  # tensor数据格式是torch(C,H,W)
+#
+#     # 获取差别图
+#     img_min=darkchannel(img) * 0.8     #计算每个通道的最小值
+#     img_max=light_channel(img) * 1.2
+#     diff = img_max - img_min
+#     diff_tensor = transf(diff).float().unsqueeze(0) /255
+#     # diff_tensor = enhance_contrast(diff_tensor)
+#
+#     output = arch(diff_tensor,img_tensor)
+#
+#     img_tensor = img_tensor.squeeze(0)
+#     diff_tensor = diff_tensor.squeeze(0)
+#     reversed_tensor = 1 - diff_tensor
+#     output = output.squeeze(0)
+#
+#     plt.subplots(2,2)
+#
+#     plt.subplot(2,2,1)
+#     plt.imshow(img_tensor.detach().permute(1,2,0))
+#     plt.subplot(2,2,2)
+#     plt.imshow(diff_tensor.detach().permute(1,2,0))
+#     plt.subplot(2,2,3)
+#     plt.imshow(reversed_tensor.detach().permute(1,2,0))
+#     plt.subplot(2,2,4)
+#     plt.imshow(output.detach().permute(1,2,0))
+#
+#     plt.show()
