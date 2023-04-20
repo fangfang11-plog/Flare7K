@@ -1,4 +1,5 @@
 import cv2 as cv
+import numpy
 import numpy as np
 
 def zmMinFilterGray(src, r=5):
@@ -32,6 +33,7 @@ def light_channel(Image):
             for c in range(channels):
               img[i][j][c] = max_rgb
     return img
+
 
 def min_filter(Image,r):                # 最小值滤波，输入最小值图像，在2*r+1的矩形窗口内寻找最小值
     rows, cols, channels = Image.shape    # 输出为暗通道图像
@@ -125,21 +127,139 @@ def del_flare(threshold_Image,Image):
                     result_image[i][j][k]= Image[i][j][k]
     return result_image
 
-# img = cv.imread('../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer/glare_000007.png')
-img = cv.imread('../result/test_images/Uformer/input/00001_input.png')
-# img = cv.imread('D:\\data\\tunnel\\Flare\\test_ours\\20230412122827.png')
-img_arr=np.array(img/255.0)                     #归一化
-img_min=darkchannel(img_arr)         #计算每个通道的最小值
-img_dark=min_filter(img_min,2)       #计算暗通道图像
-img_guided=guided_filter(img_arr,img_min,r=75,eps=0.001)
-t,A=select_bright(img_min,img,w=0.95,t0=0.1,V=img_guided)
-dehaze=repair(img_arr,t,A)
-dark_dehaze=darkchannel(dehaze)
-cv.imshow('Origin',img)
-cv.imshow('arr',img_arr)
-cv.imshow('darkchannel',img_min)
-cv.imshow('dark',img_dark)
-cv.imshow('dehaze',dehaze)
-cv.imshow('dehaze_dark',dark_dehaze)
-cv.waitKey()
-cv.destroyAllWindows()
+
+# import matplotlib.pyplot as plt
+#
+# # img = cv.imread('../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer/glare_000007.png')
+# img = cv.imread('../dataset/Flare7k/test_data/real/input/input_000000.png')
+# gt = cv.imread('../dataset/Flare7k/test_data/real/gt/gt_000000.png')
+# # 读入图片
+# # img = cv.imread('../test/test_images/input5.png')
+#
+# img_arr=np.array(img/255.0)                     #归一化
+#
+# # 获取diff
+# img_min=darkchannel(img_arr) * 0.8    #计算每个通道的最小值
+# img_max=light_channel(img_arr) * 1.2
+# diff = img_max - img_min
+# diff_mean = numpy.mean(diff[:,:,0])
+# width,height,channels = diff.shape
+# for i in range(0,width):
+#     for j in range(0,height):
+#         for k in range(0,channels):
+#             if diff[i,j,k] > diff_mean * 2:
+#                 diff[i][j][k] = diff[i,j,k] * (1 + (diff[i,j,k]))
+#             else:
+#                 diff[i][j][k] = diff[i,j,k] * (1 - (diff[i,j,k]))
+
+
+# generate dehaze
+# img_dark=min_filter(img_min,2)       #计算暗通道图像
+# img_guided=guided_filter(img_arr,img_min,r=200,eps=0.001)
+# t,A=select_bright(img_min,img,w=0.95,t0=0.1,V=img_guided)
+# dehaze=repair(img_arr,t,A)
+#
+# # 获取diff
+# img_min_dehaze = darkchannel(dehaze) * 0.8
+# img_max_dehaze = light_channel(dehaze) * 0.8
+# diff_dehaze = img_max_dehaze - img_min_dehaze
+#
+# # generate deflare
+# img_aug_diff=min_filter(diff,2)       #计算暗通道图像
+# img_guided=guided_filter(img_arr,diff,r=75,eps=0.001)
+# t,A=select_bright(diff,img,w=0.95,t0=0.1,V=img_guided)
+# deflare=repair(img_arr,t,A)
+#
+# # generate deflare from dehaze
+# img_aug_diff_dehaze=min_filter(diff_dehaze,2)       #计算暗通道图像
+# img_guided=guided_filter(img_arr,diff_dehaze,r=75,eps=0.001)
+# t,A=select_bright(diff,img,w=0.95,t0=0.1,V=img_guided)
+# deflare_from_dehaze=repair(img_arr,t,A)
+#
+# plt.subplots(2,2)
+#
+# plt.subplot(2,2,1)
+# plt.imshow(img_arr)
+# plt.title('origin')
+#
+# plt.subplot(2,2,2)
+# plt.imshow(img_min)
+# plt.title('img_min')
+#
+# plt.subplot(2,2,3)
+# plt.imshow(diff)
+# plt.title('diff')
+#
+# plt.subplot(2,2,4)
+# plt.imshow(gt)
+# plt.title('deflare')
+
+# plt.subplots(3,5)
+#
+# plt.subplot(3,5,1)
+# plt.imshow(img_arr)
+# plt.title('origin')
+#
+# plt.subplot(3,5,2)
+# plt.imshow(img_min)
+# plt.title('img_min')
+#
+# plt.subplot(3,5,3)
+# plt.imshow(img_max)
+# plt.title('img_max')
+#
+# plt.subplot(3,5,4)
+# plt.imshow(diff)
+# plt.title('diff')
+#
+# plt.subplot(3,5,5)
+# plt.imshow(img_aug_diff)
+# plt.title('aug_diff')
+#
+# plt.subplot(3,5,6)
+# plt.imshow(dehaze)
+# plt.title('dehaze')
+#
+# plt.subplot(3,5,7)
+# plt.imshow(img_min_dehaze)
+# plt.title('img_min_haze')
+#
+# plt.subplot(3,5,8)
+# plt.imshow(img_max_dehaze)
+# plt.title('img_max_dehaze')
+#
+# plt.subplot(3,5,9)
+# plt.imshow(diff_dehaze)
+# plt.title('diff_dehaze')
+#
+# plt.subplot(3,5,10)
+# plt.imshow(img_aug_diff_dehaze)
+# plt.title('aug_diff_dehaze')
+#
+# plt.subplot(3,5,11)
+# plt.imshow(deflare)
+# plt.title('deflare')
+#
+# plt.subplot(3,5,12)
+# plt.imshow(deflare_from_dehaze)
+# plt.title('deflare_from_dehaze')
+
+# plt.figure
+# plt.subplots(2,2)
+# plt.subplot(2,2,1)
+# plt.imshow(img_arr)
+# plt.title('origin')
+#
+# plt.subplot(2,2,2)
+# plt.imshow(diff)
+# plt.title('diff')
+#
+# plt.subplot(2,2,3)
+# plt.imshow(deflare)
+# plt.title('deflare')
+#
+# plt.subplot(2,2,4)
+# plt.imshow(dehaze)
+# plt.title('gt')
+
+# plt.show()

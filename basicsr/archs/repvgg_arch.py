@@ -1,6 +1,7 @@
 import os
 
 from basicsr.archs.se_block import SEBlock
+# from basicsr.utils.dark_channel_prior import DarkChannelPrior, Dehaze
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import torch
@@ -56,7 +57,7 @@ class RepVGGBlock(nn.Module):
 
         if use_se:
             #   Note that RepVGG-D2se uses SE before nonlinearity. But RepVGGplus models uses SE after nonlinearity.
-            self.se = SEBlock(out_channels, internal_neurons=out_channels // 16)
+            self.se = SEBlock(out_channels, internal_neurons=out_channels)
         else:
             self.se = nn.Identity()
 
@@ -192,6 +193,7 @@ class RepVGG(nn.Module):
         self.stage3 = self._make_stage(int(64 * width_multiplier[1]),num_blocks[2],stride=1)
         self.stage4 = self._make_stage(int(64 * width_multiplier[1]),num_blocks[3],stride=1)
         self.stage5 = self._make_stage(6,num_blocks[0] - 1,stride=1)
+        # self.dehazer = Dehaze()
 
     def _make_stage(self, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -205,18 +207,24 @@ class RepVGG(nn.Module):
         return nn.ModuleList(blocks)
 
     def forward(self, x):
-        _,channels,width,height = x.shape
-        dark = torch.max(x,1,keepdim=True)[0]
-        img_tensor_3c = torch.stack([dark[0], dark[0], dark[0]], dim=1)
-        x = img_tensor_3c
+        # _,channels,width,height = x.shape
+        # dark = torch.max(x,1,keepdim=True)[0]
+        # img_tensor_3c = torch.stack([dark[0], dark[0], dark[0]], dim=1)
+        #
+        # x = img_tensor_3c
+        # dark = self.dehazer.process_batch(x)
+
         out = self.stage0(x)
+        # out_dark = self.stage0(dark)
         for stage in (self.stage1, self.stage2, self.stage3, self.stage4,self.stage5):
             for block in stage:
                 if self.use_checkpoint:
                     out = checkpoint.checkpoint(block, out)
+                    # out_dark = checkpoint.checkpoint(block,out_dark)
                 else:
+                    # out_dark = checkpoint.checkpoint(out_dark)
                     out = block(out)
-        return out,img_tensor_3c
+        return out,x
 
 
 
@@ -316,32 +324,36 @@ def repvgg_model_convert(model:torch.nn.Module, save_path=None, do_copy=True):
         torch.save(model.state_dict(), save_path)
     return model
 
-repvgg_a0 = get_RepVGG_func_by_name('RepVGG-A0')()
-print(repvgg_a0)
-import torchvision.transforms as transforms
-import cv2 as cv
-import sys
-import matplotlib.pyplot as plt
-sys.path.append('D:\\data\\tunnel\\Flare')
-img = cv.imread('D:\\data\\tunnel\\Flare\\test\\test_images\\input1.png')
-print(img.shape)   # numpy数组格式为（H,W,C）
-
-transf = transforms.ToTensor()
-img_tensor = transf(img).unsqueeze(0)  # tensor数据格式是torch(C,H,W)
-print(img_tensor.size())
-
-out,dark= repvgg_a0(img_tensor)
-# cv.imshow('out',out_numpy)
-# cv.waitkeys(0)
-# cv.destroy
-out = out.squeeze(0)
-dark = dark.squeeze(0)
-
-plt.subplots(3,1)
-plt.subplot(3,1,1)
-plt.imshow(out.detach().permute(1,2,0)[:,:,:3])
-plt.subplot(3,1,2)
-plt.imshow(out.detach().permute(1,2,0)[:,:,3:])
-plt.subplot(3,1,3)
-plt.imshow(dark.detach().permute(1,2,0))
-plt.show()
+# repvgg_a0 = get_RepVGG_func_by_name('RepVGG-A0')()
+# print(repvgg_a0)
+# import torchvision.transforms as transforms
+# import cv2 as cv
+# import sys
+# import matplotlib.pyplot as plt
+#
+#
+# sys.path.append('D:\\data\\tunnel\\Flare')
+# img = cv.imread('D:\\data\\tunnel\\Flare\\test\\test_images\\input1.png')
+#
+# transf = transforms.ToTensor()
+# img_tensor = transf(img).unsqueeze(0)  # tensor数据格式是torch(C,H,W)
+#
+# out,out_dark,dark,origin= repvgg_a0(img_tensor)
+# out = out.squeeze(0)
+# dark = dark.squeeze(0)
+#
+# plt.subplots(2,3)
+# plt.subplot(2,3,1)
+# plt.imshow(origin.detach().permute(1,2,0)[:,:,:3])
+# plt.subplot(2,3,2)
+# plt.imshow(out.detach().permute(1,2,0)[:,:,:3])
+# plt.subplot(2,3,3)
+# plt.imshow(out.detach().permute(1,2,0)[:,:,3:])
+#
+# plt.subplot(2,3,4)
+# plt.imshow(dark.detach().permute(1,2,0))
+# plt.subplot(2,3,5)
+# plt.imshow(out_dark.detach().permute(1,2,0)[:,:,:3])
+# plt.subplot(2,3,6)
+# plt.imshow(out_dark.detach().permute(1,2,0)[:,:,3:])
+# plt.show()
