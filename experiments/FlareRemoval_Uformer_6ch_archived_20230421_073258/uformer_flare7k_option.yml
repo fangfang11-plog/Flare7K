@@ -1,6 +1,6 @@
-# GENERATE TIME: Fri Apr 21 07:49:13 2023
+# GENERATE TIME: Sat Apr 15 14:51:04 2023
 # CMD:
-# train.py -opt ../options/uformer_flare7k_option.yml
+# D:/data/tunnel/Flare/basicsr/train.py
 
 # general settings
 name: FlareRemoval_Uformer_6ch
@@ -113,4 +113,3 @@ logger:
 dist_params:
   backend: nccl
   port: 29500
-29500
