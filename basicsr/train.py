@@ -7,8 +7,11 @@ from os import path as osp
 import os
 #os.environ['CUDA_VISIBLE_S']='2,3'
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-import sys
-sys.path.append('/home/fanglihuang/workspace/data/Flare7K')
+# import sys
+# sys.path.insert(0,'D:\\data\\tunnel\\Flare')
+# print()
+# print(sys.path)
+
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.data.data_sampler import EnlargedSampler
 from basicsr.data.prefetch_dataloader import CPUPrefetcher, CUDAPrefetcher

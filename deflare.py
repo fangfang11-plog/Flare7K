@@ -43,12 +43,14 @@ def demo(images_path,output_path,model_type,output_ch,pretrain_dir):
         mkdir(result_path+"flare/")
         mkdir(result_path+"input/")
         mkdir(result_path+"blend/")
+        mkdir(result_path+"output/")
 
         deflare_path = result_path+"deflare/"+str(i).zfill(5)+"_deflare.png"
         flare_path = result_path+"flare/"+str(i).zfill(5)+"_flare.png"
         merge_path = result_path+"input/"+str(i).zfill(5)+"_input.png"
         blend_path = result_path+"blend/"+str(i).zfill(5)+"_blend.png"
         mask_path = result_path + "mask/"+str(i).zfill(5)+"_mask.png"
+        output_path =  result_path + "output/"+str(i).zfill(5)+"_output.png"
         merge_img = Image.open(image_path).convert("RGB")
         merge_img = resize(to_tensor(merge_img))
         merge_img = merge_img.cuda().unsqueeze(0)
@@ -75,6 +77,7 @@ def demo(images_path,output_path,model_type,output_ch,pretrain_dir):
             torchvision.utils.save_image(flare_img_predicted, flare_path)
             torchvision.utils.save_image(deflare_img, deflare_path)
             torchvision.utils.save_image(blend_img, blend_path)
+            torchvision.utils.save_image(output_img[:,3:,:,:],output_path)
 
 
 model_type="Uformer"
