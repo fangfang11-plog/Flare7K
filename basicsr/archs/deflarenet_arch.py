@@ -191,7 +191,7 @@ class ExpansionConvNet(nn.Module):
         adjust_out = enhance_contrast(out)
         return adjust_out
 
-# @ARCH_REGISTRY.register()
+@ARCH_REGISTRY.register()
 class DeflareNet(nn.Module):
     def __init__(self,img_size=512, img_ch=3, output_ch=6, use_se=False):
         super(DeflareNet, self).__init__()
@@ -218,8 +218,10 @@ class DeflareNet(nn.Module):
         """
 
         # 获得 去除光源的图像o1 和 和掩膜
-        o1,mask,light_src = self._lightsrc_repby_mask(x)
-
+        o1,light_src = self._lightsrc_repby_mask(x)
+        # 这部分考虑 没有光源有耀斑情况
+        # if light_src == None:
+        #     return o1
         # 球的差异通道
         diff = self._calculate_diff_channel_batch(x)
 
@@ -267,7 +269,9 @@ class DeflareNet(nn.Module):
         return img_diff
 
     # 用mask 替换 light source
-    def _lightsrc_repby_mask(input_scene, pred_scene=None, threshold=0.99, luminance_mode=False):
+    def _lightsrc_repby_mask(self,input_scene, pred_scene=None, threshold=0.99, luminance_mode=False):
+        mask_rgb = None
+
         binary_mask = (get_highlight_mask(input_scene, threshold=threshold, luminance_mode=luminance_mode) > 0.5).to(
             "cpu", torch.bool)
         binary_mask = binary_mask.squeeze()  # (h, w)
@@ -295,8 +299,11 @@ class DeflareNet(nn.Module):
             blend = input_scene - input_scene * mask_rgb
             # blend = input_scene - input_scene * mask_rgb + pred_scene * mask_rgb
         else:
-            blend = pred_scene
-        return blend, mask_rgb,input_scene * mask_rgb
+            blend = input_scene
+        if mask_rgb == None:
+            return blend,None
+        else:
+            return blend,input_scene * mask_rgb
 
     # 对区域进行掩膜
     def mask_light_area(self,x,mask):

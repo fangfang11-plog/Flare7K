@@ -1,3 +1,7 @@
+# GENERATE TIME: Sat Apr 22 21:14:08 2023
+# CMD:
+# D:/data/tunnel/Flare/basicsr/train.py
+
 # general settings
 name: FlareRemoval_DeflareNet_6ch
 model_type: DDeflareModel
@@ -42,12 +46,12 @@ datasets:
 
 # network structures
 network_g:
-  type: DeflareNet
+  type: RepVGG
   img_size: 512
   img_ch: 3
-  output_ch: 3
-#  width_multiplier: [1, 1, 1, 1]
-#  num_blocks: [2, 4, 14, 1,1]
+  output_ch: 6
+  width_multiplier: [1, 1, 1, 1]
+  num_blocks: [2, 4, 14, 1,1]
   use_se: true
 # path
 path:

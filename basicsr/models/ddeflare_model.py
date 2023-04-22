@@ -150,6 +150,8 @@ class DDeflareModel(SRModel):
         return deflare_mask_img,flare_predicted,merge_img_predicted
 
     def mask_operation(self,x,mask):
+        if mask == None:
+            return x
         B, C, H, W = x.shape
         for b in range(B):
             for c in range(C):
