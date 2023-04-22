@@ -83,7 +83,7 @@ class DDeflareModel(SRModel):
 
         """
         self.optimizer_g.zero_grad()
-        print(self.net_g)
+        # print(self.net_g)
         self.output,self.light_src,self.flare= self.net_g(self.lq)
 
         if self.output_ch == 3:
