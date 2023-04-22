@@ -139,7 +139,8 @@ def blend_light_source(input_scene, pred_scene,threshold=0.99,luminance_mode=Fal
 
         mask_rgb = torch.from_numpy(mask_rgb).to(input_scene.device, torch.float32)
         # blend = input_scene * mask_rgb + pred_scene * (1 - mask_rgb)
-        blend = input_scene - input_scene * mask_rgb + pred_scene * mask_rgb
+        blend = input_scene - input_scene * mask_rgb
+                # + pred_scene * mask_rgb
     else:
         blend = pred_scene
     return blend,mask_rgb

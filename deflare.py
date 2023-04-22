@@ -72,6 +72,7 @@ def demo(images_path,output_path,model_type,output_ch,pretrain_dir):
             blend_img,mask= blend_light_source(merge_img, deflare_img, 0.97)
             mask = mask.cpu().numpy().transpose(1,2,0)
             plt.imshow(mask)
+            plt.show()
             plt.savefig(mask_path)
             torchvision.utils.save_image(merge_img, merge_path)
             torchvision.utils.save_image(flare_img_predicted, flare_path)

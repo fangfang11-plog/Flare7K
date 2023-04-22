@@ -1,4 +1,4 @@
-# GENERATE TIME: Fri Apr 21 15:47:00 2023
+# GENERATE TIME: Sat Apr 22 16:12:45 2023
 # CMD:
 # D:/data/tunnel/Flare/basicsr/train.py
 
@@ -14,12 +14,14 @@ datasets:
   train:
     name: Flare7K
     type: Flare_Pair_Loader
-    image_path: dataset/Flickr24K
+    image_path: ../dataset/Flickr24K/test
     scattering_dict:
-      Flare7K_scattering: dataset/Flare7k/Scattering_Flare/Glare_with_shimmer
+#      Flare7K_scattering: ../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer/small_scale
+      Flare7K_scattering: ../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer
     reflective_dict:
 #      Flare7K_reflective: ../dataset/Flare7k/test
-      Flare7K_reflective: dataset/Flare7k/Reflective_Flare
+      Flare7K_reflective: ../dataset/Flare7k/Reflective_Flare
+#      Flare7K_reflective: ../dataset/Flare7k/Reflective_Flare/test
     transform_base:
       img_size: 512
     transform_flare:
@@ -40,8 +42,8 @@ datasets:
   val:
     name: flare_test
     type: Image_Pair_Loader
-    dataroot_gt: dataset/Flare7k/test_data/real/gt
-    dataroot_lq: dataset/Flare7k/test_data/real/input
+    dataroot_gt: ../dataset/Flare7k/test_data/real/gt
+    dataroot_lq: ../dataset/Flare7k/test_data/real/input
     gt_size: 512
 
 # network structures

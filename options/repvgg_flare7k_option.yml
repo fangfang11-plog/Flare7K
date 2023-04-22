@@ -12,10 +12,12 @@ datasets:
     type: Flare_Pair_Loader
     image_path: ../dataset/Flickr24K
     scattering_dict:
+#      Flare7K_scattering: ../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer/small_scale
       Flare7K_scattering: ../dataset/Flare7k/Scattering_Flare/Glare_with_shimmer
     reflective_dict:
 #      Flare7K_reflective: ../dataset/Flare7k/test
       Flare7K_reflective: ../dataset/Flare7k/Reflective_Flare
+#      Flare7K_reflective: ../dataset/Flare7k/Reflective_Flare/test
     transform_base:
       img_size: 512
     transform_flare:

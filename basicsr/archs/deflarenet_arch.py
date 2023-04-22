@@ -1,4 +1,9 @@
 import os
+
+import cv2
+import numpy as np
+import skimage
+
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import torch
 from torch import nn
@@ -6,7 +11,7 @@ from torch import nn
 import torch.functional as F
 
 from basicsr.utils.channel_transform import darkchannel
-from basicsr.utils.flare_util import blend_light_source
+from basicsr.utils.flare_util import blend_light_source, get_highlight_mask, refine_mask, _create_disk_kernel
 from basicsr.utils.registry import ARCH_REGISTRY
 from test_ours.dark_channel_show import light_channel
 
@@ -194,17 +199,119 @@ class DeflareNet(nn.Module):
 
         self.resnet18 = ResNet18(output_ch=3)
 
-    def forward(self,diff,x):
+    def forward(self,x):
+        """
+
+        Args:
+            x: O(x) = L(x) + F(x) + B(x)   带耀斑和光源的原图
+        Param:
+            output: B(x) + mask(x)  | 与 无损坏耀斑图像（删除本来有光源区域）比较
+                    L(x) + F(x)     | 与 Flare图像计算损失
+        Process:
+            1.Calculate O1(x) = O(x) - L(x) + mask(x) = mask(x) + F(x) + B(x)
+            2.Calculate diff(x) = O(x)(max - min)
+            3.Calculate B(x) + mask(x) = O(x) - F(x)
+        function
+        Returns:
+            output: 输出无耀斑 光源mask 图像 可以与GT 数据集中无耀斑 图像进行损失计算
+            light: 输出之后与 F(X) 相加获得 flare图像，进行损失计算
+        """
+
+        # 获得 去除光源的图像o1 和 和掩膜
+        o1,mask,light_src = self._lightsrc_repby_mask(x)
+
+        # 球的差异通道
+        diff = self._calculate_diff_channel_batch(x)
+
+        # 输入参数为带耀斑和光源的原图
         # 差异通道卷积
         diff = self.diff_conv(diff)
 
-        x_diff = x / diff
+        x_diff = o1 / diff
 
         re_x_diff = self.resnet18(x_diff)
 
         output = x_diff - re_x_diff
 
-        return output
+        flare = o1 - output
+
+        return output,light_src,flare
+
+    def _calculate_dark_channel_batch(self,images):
+        B, C, H, W = images.shape
+        img = images.clone()
+        for b in range(B):
+            for i in range(H):
+                for j in range(W):
+                    min_rgb = img[b, :, i, j].min()
+                    img[b, :, i, j] = min_rgb
+        return img
+
+    def _calculate_light_channel_batch(self,images):
+        B, C, H, W = images.shape
+        img = images.clone()
+        for b in range(B):
+            for i in range(H):
+                for j in range(W):
+                    max_rgb = img[b, :, i, j].max()
+                    img[b, :, i, j] = max_rgb
+        return img
+
+    def _calculate_diff_channel_batch(self,image):
+
+        # 计算最小通道与最大通道的差异
+        img_max = self._calculate_light_channel_batch(image)
+        img_min = self._calculate_dark_channel_batch(image)
+        img_diff = img_max - img_min
+
+        return img_diff
+
+    # 用mask 替换 light source
+    def _lightsrc_repby_mask(input_scene, pred_scene=None, threshold=0.99, luminance_mode=False):
+        binary_mask = (get_highlight_mask(input_scene, threshold=threshold, luminance_mode=luminance_mode) > 0.5).to(
+            "cpu", torch.bool)
+        binary_mask = binary_mask.squeeze()  # (h, w)
+        binary_mask = binary_mask.numpy()
+        binary_mask = refine_mask(binary_mask)
+
+        labeled = skimage.measure.label(binary_mask)
+        properties = skimage.measure.regionprops(labeled)
+        max_diameter = 0
+        for p in properties:
+            # The diameter of a circle with the same area as the region.
+            max_diameter = max(max_diameter, p["equivalent_diameter"])
+
+        mask = np.float32(binary_mask)
+        kernel_size = round(1.5 * max_diameter)  # default is 1.5
+        if kernel_size > 0:
+            kernel = _create_disk_kernel(kernel_size)
+            mask = cv2.filter2D(mask, -1, kernel)
+            mask = np.clip(mask * 3.0, 0.0, 1.0)
+            mask_rgb = np.stack([mask] * 3, axis=0)
+
+            mask_rgb = torch.from_numpy(mask_rgb).to(input_scene.device, torch.float32)
+
+            # 获得去除光源的图像
+            blend = input_scene - input_scene * mask_rgb
+            # blend = input_scene - input_scene * mask_rgb + pred_scene * mask_rgb
+        else:
+            blend = pred_scene
+        return blend, mask_rgb,input_scene * mask_rgb
+
+    # 对区域进行掩膜
+    def mask_light_area(self,x,mask):
+        B, C, H, W = x.shape
+        img = x
+        for b in range(B):
+            for c in range(C):
+                for i in range(H):
+                    for j in range(W):
+                        if mask[b,c,i,j] > 0:
+                            x[b,c,i,j] = 0
+
+        return x
+
+
 
 if __name__ == "__main__":
     arch = DeflareNet()
