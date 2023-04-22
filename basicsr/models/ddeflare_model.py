@@ -138,7 +138,7 @@ class DDeflareModel(SRModel):
         if self.ema_decay > 0:
             self.model_ema(decay=self.ema_decay)
 
-    def predict_flare_from_6_ch(deflare_mask_img,flare_predicted,gamma):
+    def predict_flare_from_6_ch(self,deflare_mask_img,flare_predicted,gamma):
         #the input is a tensor in [B,C,H,W], the C here is 6
 
         # deflare_img=input_tensor[:,:3,:,:]

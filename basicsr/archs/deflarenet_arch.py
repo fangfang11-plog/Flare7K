@@ -8,7 +8,7 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import torch
 from torch import nn
 # from basicsr.archs.test import ExpansionConvNet
-import torch.functional as F
+import torch.nn.functional as F
 
 from basicsr.utils.channel_transform import darkchannel
 from basicsr.utils.flare_util import blend_light_source, get_highlight_mask, refine_mask, _create_disk_kernel
