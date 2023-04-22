@@ -122,7 +122,7 @@ def train_pipeline(root_path):
     logger.info(dict2str(opt))
     # initialize wandb and tb loggers
     tb_logger = init_tb_loggers(opt)
-
+    torch.autograd.set_detect_anomaly(True)
     # create train and validation dataloaders
     result = create_train_val_dataloader(opt, logger)
     train_loader, train_sampler, val_loaders, total_epochs, total_iters = result
