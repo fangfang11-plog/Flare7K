@@ -219,6 +219,7 @@ class DeflareNet(nn.Module):
 
         # 获得 去除光源的图像o1 和 和掩膜
         o1,light_src = self._lightsrc_repby_mask(x)
+        light_src1 = None
         # 这部分考虑 没有光源有耀斑情况
         # if light_src == None:
         #     return o1
@@ -236,12 +237,12 @@ class DeflareNet(nn.Module):
         output = x_diff - re_x_diff
 
         flare = o1 - output
-        output = torch.clamp(output,0,1)
+        output1 = torch.clamp(output,0,1)
         if light_src != None:
-            light_src = torch.clamp(light_src,0,1)
-        flare = torch.clamp(flare,0,1)
+            light_src1 = torch.clamp(light_src,0,1)
+        flare1 = torch.clamp(flare,0,1)
 
-        return output,light_src,flare
+        return output1,light_src1,flare1
 
     def _calculate_dark_channel_batch(self,images):
         B, C, H, W = images.shape
