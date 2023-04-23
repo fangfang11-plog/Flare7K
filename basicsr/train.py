@@ -4,7 +4,7 @@ import math
 import time
 import torch
 torch.autograd.set_detect_anomaly(True)
-torch.autograd.detect_anomaly(True)
+torch.autograd.detect_anomaly()
 from os import path as osp
 import os
 #os.environ['CUDA_VISIBLE_S']='2,3'
@@ -166,8 +166,8 @@ def train_pipeline(root_path):
         print("epoch:" + str(epoch))
         while train_data is not None:
             data_timer.record()
-
             current_iter += 1
+            print(current_iter)
             if current_iter > total_iters:
                 break
             # update learning rate

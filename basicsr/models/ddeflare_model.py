@@ -150,18 +150,25 @@ class DDeflareModel(SRModel):
         merge_img_predicted=adjust_gamma_reverse(torch.clamp(merge_img_predicted_linear, 1e-7, 1.0),gamma)
         return deflare_mask_img,flare_predicted,merge_img_predicted
 
-    def mask_operation(self,x,mask):
-        if mask == None:
-            return x
-        B, C, H, W = x.shape
-        for b in range(B):
-            for c in range(C):
-                for i in range(H):
-                    for j in range(W):
-                        if mask[b, c, i, j] > 0:
-                            x[b, c, i, j] = 0
+    # def mask_operation(self,x,mask):
+    #     if mask == None:
+    #         return x
+    #     B, C, H, W = x.shape
+    #     for b in range(B):
+    #         for c in range(C):
+    #             for i in range(H):
+    #                 for j in range(W):
+    #                     if mask[b, c, i, j] > 0:
+    #                         x[b, c, i, j] = 0
+    #
+    #     return x
 
+    def mask_operation(self,x, mask):
+        if mask is None:
+            return x
+        x[mask > 0] = 0
         return x
+
 
 
     def test(self):

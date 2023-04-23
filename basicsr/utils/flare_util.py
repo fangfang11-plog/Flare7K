@@ -37,8 +37,9 @@ def adjust_gamma(image: torch.Tensor, gamma):
     gamma=gamma.float().cuda()
     gamma_tensor=torch.ones_like(image)
     gamma_tensor=gamma.view(-1,1,1,1)*gamma_tensor
-    image=torch.pow(image,gamma_tensor)
-    out= torch.clamp(image, 0.0, 1.0)
+    image_copy = image.clone()
+    image1=torch.pow(image_copy,gamma_tensor)
+    out= torch.clamp(image1, 0.0, 1.0)
     return out
 
 def adjust_gamma_reverse(image: torch.Tensor, gamma):
@@ -46,8 +47,8 @@ def adjust_gamma_reverse(image: torch.Tensor, gamma):
     gamma=1/gamma.float().cuda()
     gamma_tensor=torch.ones_like(image)
     gamma_tensor=gamma.view(-1,1,1,1)*gamma_tensor
-    image=torch.pow(image,gamma_tensor)
-    out= torch.clamp(image, 0.0, 1.0)
+    image1=torch.pow(image,gamma_tensor)
+    out= torch.clamp(image1, 0.0, 1.0)
     return out
 
 def  predict_flare_from_6_channel(input_tensor,gamma):

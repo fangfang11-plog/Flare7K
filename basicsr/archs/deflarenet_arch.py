@@ -244,34 +244,43 @@ class DeflareNet(nn.Module):
 
         return output1,light_src1,flare1
 
+    # def _calculate_dark_channel_batch(self,images):
+    #     B, C, H, W = images.shape
+    #     img = images.clone()
+    #     for b in range(B):
+    #         for i in range(H):
+    #             for j in range(W):
+    #                 min_rgb = img[b, :, i, j].min()
+    #                 img[b, :, i, j] = min_rgb
+    #     return img
+    #
+    # def _calculate_light_channel_batch(self,images):
+    #     B, C, H, W = images.shape
+    #     img = images.clone()
+    #     for b in range(B):
+    #         for i in range(H):
+    #             for j in range(W):
+    #                 max_rgb = img[b, :, i, j].max()
+    #                 img[b, :, i, j] = max_rgb
+    #     return img
+
     def _calculate_dark_channel_batch(self,images):
-        B, C, H, W = images.shape
-        img = images.clone()
-        for b in range(B):
-            for i in range(H):
-                for j in range(W):
-                    min_rgb = img[b, :, i, j].min()
-                    img[b, :, i, j] = min_rgb
-        return img
+        min_rgb, _ = images.min(dim=1, keepdim=True)
+        return min_rgb
 
     def _calculate_light_channel_batch(self,images):
-        B, C, H, W = images.shape
-        img = images.clone()
-        for b in range(B):
-            for i in range(H):
-                for j in range(W):
-                    max_rgb = img[b, :, i, j].max()
-                    img[b, :, i, j] = max_rgb
-        return img
+        max_rgb, _ = images.max(dim=1, keepdim=True)
+        return max_rgb
 
     def _calculate_diff_channel_batch(self,image):
 
         # 计算最小通道与最大通道的差异
         img_max = self._calculate_light_channel_batch(image)
         img_min = self._calculate_dark_channel_batch(image)
-        img_diff = img_max - img_min
-
-        return img_diff
+        img_diff = (img_max - img_min).squeeze(0)
+        # 将 x 沿着新的第 1 维度（即通道维度）复制 3 次，并进行堆叠
+        x_3ch = torch.stack((img_diff,) * 3, dim=1)
+        return x_3ch
 
     # 用mask 替换 light source
     def _lightsrc_repby_mask(self,input_scene, pred_scene=None, threshold=0.99, luminance_mode=False):
