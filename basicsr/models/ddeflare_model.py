@@ -141,7 +141,8 @@ class DDeflareModel(SRModel):
     def predict_flare_from_6_ch(self,deflare_mask_img,flare_predicted,gamma):
         #the input is a tensor in [B,C,H,W], the C here is 6
 
-        # deflare_img=input_tensor[:,:3,:,:]
+        # deflare_img=input_tensor[:,:
+        # 3,:,:]
         # flare_img_predicted=input_tensor[:,3:,:,:]
 
         # 获得 去除光源的耀斑图

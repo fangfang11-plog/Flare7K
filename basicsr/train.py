@@ -162,7 +162,7 @@ def train_pipeline(root_path):
         train_sampler.set_epoch(epoch)
         prefetcher.reset()
         train_data = prefetcher.next()
-
+        print("epoch:" + epoch)
         while train_data is not None:
             data_timer.record()
 
