@@ -289,7 +289,7 @@ class DDeflareModel(SRModel):
             out_dict['gt'] = self.gt.detach().cpu()
         return out_dict
 
-    def get_blend_with_light_source(input_scene, pred_scene, threshold=0.99, luminance_mode=False):
+    def get_blend_with_light_source(self,input_scene, pred_scene, threshold=0.99, luminance_mode=False):
         binary_mask = (get_highlight_mask(input_scene, threshold=threshold, luminance_mode=luminance_mode) > 0.5).to(
             "cpu", torch.bool)
         binary_mask = binary_mask.squeeze()  # (h, w)
