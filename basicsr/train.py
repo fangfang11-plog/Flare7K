@@ -3,6 +3,8 @@ import logging
 import math
 import time
 import torch
+torch.autograd.set_detect_anomaly(True)
+torch.autograd.detect_anomaly(True)
 from os import path as osp
 import os
 #os.environ['CUDA_VISIBLE_S']='2,3'
@@ -122,7 +124,6 @@ def train_pipeline(root_path):
     logger.info(dict2str(opt))
     # initialize wandb and tb loggers
     tb_logger = init_tb_loggers(opt)
-    torch.autograd.set_detect_anomaly(True)
     # create train and validation dataloaders
     result = create_train_val_dataloader(opt, logger)
     train_loader, train_sampler, val_loaders, total_epochs, total_iters = result
