@@ -163,11 +163,11 @@ def train_pipeline(root_path):
         train_sampler.set_epoch(epoch)
         prefetcher.reset()
         train_data = prefetcher.next()
-        print("epoch:" + str(epoch))
+        logger.info(f"epoch:{epoch}" )
         while train_data is not None:
             data_timer.record()
             current_iter += 1
-            print(current_iter)
+            logger.info(f"current{current_iter}")
             if current_iter > total_iters:
                 break
             # update learning rate
