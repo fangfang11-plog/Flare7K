@@ -188,8 +188,8 @@ class ExpansionConvNet(nn.Module):
 
         out = self.no_linear(out)
 
-        adjust_out = enhance_contrast(out)
-        return adjust_out
+        # adjust_out = enhance_contrast(out)
+        return out
 
 @ARCH_REGISTRY.register()
 class DeflareNet(nn.Module):
@@ -236,6 +236,10 @@ class DeflareNet(nn.Module):
         output = x_diff - re_x_diff
 
         flare = o1 - output
+        output = torch.clamp(output,0,1)
+        if light_src != None:
+            light_src = torch.clamp(light_src,0,1)
+        flare = torch.clamp(flare,0,1)
 
         return output,light_src,flare
 
