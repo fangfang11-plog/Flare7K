@@ -4,7 +4,7 @@ from os import path as osp
 import cv2
 import numpy as np
 import skimage
-
+from torch.cuda.amp import autocast
 from basicsr.archs import build_network
 from basicsr.losses import build_loss
 from basicsr.models.sr_model import SRModel
@@ -84,51 +84,52 @@ class DDeflareModel(SRModel):
         """
         self.optimizer_g.zero_grad()
         # print(self.net_g)
-        self.output,self.light_src,self.flare= self.net_g(self.lq)
+        with autocast():
+            self.output,self.light_src,self.flare_predicted= self.net_g(self.lq)
 
-        if self.output_ch == 3:
-            # deflare = output, flare_hat = flare,
-            self.deflare, self.flare_hat, self.merge_hat = self.predict_flare_from_6_ch(self.output, self.flare,self.gamma)
-        # elif self.output_ch == 3:
-        #     self.mask = torch.zeros_like(self.lq).cuda()  # Comment this line if you want to use the mask
-        #     self.deflare, self.flare_hat = predict_flare_from_3_channel(self.output, self.mask, self.lq, self.flare,
-        #                                                                 self.lq, self.gamma)
-        else:
-            assert False, "Error! Output channel should be defined as 3 or 6."
+            if self.output_ch == 3:
+                # deflare = output, flare_hat = flare,
+                self.deflare, self.flare_hat, self.merge_hat = self.predict_flare_from_6_ch(self.output, self.flare_predicted,self.gamma)
+            # elif self.output_ch == 3:
+            #     self.mask = torch.zeros_like(self.lq).cuda()  # Comment this line if you want to use the mask
+            #     self.deflare, self.flare_hat = predict_flare_from_3_channel(self.output, self.mask, self.lq, self.flare,
+            #                                                                 self.lq, self.gamma)
+            else:
+                assert False, "Error! Output channel should be defined as 3 or 6."
 
-        self.flare_lightarea_masked = self.mask_operation(self.flare,mask=self.light_src)
-        self.gt_lightarea_masked = self.mask_operation(self.gt,mask=self.light_src)
-        self.lq_masked = self.mask_operation(self.lq,mask=self.light_src)
+            # self.flare_lightarea_masked = self.mask_operation(self.flare,mask=self.light_src)
+            # self.gt_lightarea_masked = self.mask_operation(self.gt,mask=self.light_src)
+            # self.lq_masked = self.mask_operation(self.lq,mask=self.light_src)
 
-        l_total = 0
-        loss_dict = OrderedDict()
-        # l1 loss
-        l1_flare = self.l1_pix(self.flare_hat, self.flare_lightarea_masked)
-        l1_base = self.l1_pix(self.deflare, self.gt_lightarea_masked)
+            l_total = 0
+            loss_dict = OrderedDict()
+            # l1 loss
+            l1_flare = self.l1_pix(self.flare_hat, self.flare)
+            l1_base = self.l1_pix(self.deflare, self.gt)
 
-        # l1_flare = self.l1_pix(self.flare_hat, self.flare)
-        # l1_base = self.l1_pix(self.deflare, self.gt)
-        l1 = l1_flare + l1_base
-        # if self.output_ch == 6:
-        #     l1_recons = self.l1_pix(self.merge_hat, self.lq)
-        #     loss_dict['l1_recons'] = l1_recons * 2
-        #     l1 += l1_recons * 2
-        l1_recons = self.l1_pix(self.merge_hat, self.lq_masked)
-        loss_dict['l1_recons'] = l1_recons * 2
-        l1 += l1_recons * 2
-        l_total += l1
-        loss_dict['l1_flare'] = l1_flare
-        loss_dict['l1_base'] = l1_base
-        loss_dict['l1'] = l1
+            # l1_flare = self.l1_pix(self.flare_hat, self.flare)
+            # l1_base = self.l1_pix(self.deflare, self.gt)
+            l1 = l1_flare + l1_base
+            # if self.output_ch == 6:
+            #     l1_recons = self.l1_pix(self.merge_hat, self.lq)
+            #     loss_dict['l1_recons'] = l1_recons * 2
+            #     l1 += l1_recons * 2
+            l1_recons = self.l1_pix(self.merge_hat, self.lq)
+            loss_dict['l1_recons'] = l1_recons * 2
+            l1 += l1_recons * 2
+            l_total += l1
+            loss_dict['l1_flare'] = l1_flare
+            loss_dict['l1_base'] = l1_base
+            loss_dict['l1'] = l1
 
-        # perceptual loss
-        l_vgg_flare = self.l_perceptual(self.flare_hat, self.flare_lightarea_masked)
-        l_vgg_base = self.l_perceptual(self.deflare, self.gt_lightarea_masked)
-        l_vgg = l_vgg_base + l_vgg_flare
-        l_total += l_vgg
-        loss_dict['l_vgg'] = l_vgg
-        loss_dict['l_vgg_base'] = l_vgg_base
-        loss_dict['l_vgg_flare'] = l_vgg_flare
+            # perceptual loss
+            l_vgg_flare = self.l_perceptual(self.flare_hat, self.flare)
+            l_vgg_base = self.l_perceptual(self.deflare, self.gt)
+            l_vgg = l_vgg_base + l_vgg_flare
+            l_total += l_vgg
+            loss_dict['l_vgg'] = l_vgg
+            loss_dict['l_vgg_base'] = l_vgg_base
+            loss_dict['l_vgg_flare'] = l_vgg_flare
 
         l_total.backward()
         self.optimizer_g.step()
@@ -283,6 +284,8 @@ class DDeflareModel(SRModel):
         out_dict = OrderedDict()
         out_dict['lq'] = self.lq.detach().cpu()
         self.blend = self.get_blend_with_light_source(self.lq, self.deflare, 0.97)
+        if self.light_src != None:
+             self.blend = self.blend + self.light_src
         out_dict['result'] = self.blend.detach().cpu()
         out_dict['flare'] = self.flare_hat.detach().cpu()
         if hasattr(self, 'gt'):

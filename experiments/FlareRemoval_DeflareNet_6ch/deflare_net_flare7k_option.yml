@@ -1,3 +1,7 @@
+# GENERATE TIME: Wed Apr 26 19:13:25 2023
+# CMD:
+# D:/data/tunnel/Flare/basicsr/train.py
+
 # general settings
 name: FlareRemoval_DeflareNet_6ch
 model_type: DDeflareModel

@@ -3,6 +3,9 @@ import os
 import cv2
 import numpy as np
 import skimage
+from torch.cuda.amp import autocast
+
+from basicsr.archs.uformer_arch import Uformer, Downsample, Upsample
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import torch
@@ -62,11 +65,11 @@ class ResBlock(nn.Module):
 
         return out
 class ResNet18(nn.Module):
-    def __init__(self,img_ch=3,mid_ch=64,output_ch=3,num_blocks=2):
+    def __init__(self,img_ch=1,mid_ch=64,output_ch=3,num_blocks=2):
         super(ResNet18, self).__init__()
         self.inchannel = mid_ch
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=img_ch,out_channels=mid_ch,kernel_size=3,stride=1,padding=1,bias=True),
+            nn.Conv2d(in_channels=img_ch,out_channels=mid_ch,kernel_size=3,stride=1,padding=1,bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -76,7 +79,7 @@ class ResNet18(nn.Module):
         self.layer3 = self.make_layer(ResBlock, mid_ch, num_blocks, stride=1)
         self.layer4 = self.make_layer(ResBlock, mid_ch, num_blocks, stride=1)
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=mid_ch, out_channels=output_ch, kernel_size=3, stride=1, padding=1, bias=True),
+            nn.Conv2d(in_channels=mid_ch, out_channels=output_ch, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(3),
             nn.ReLU(),
         )
@@ -98,6 +101,11 @@ class ResNet18(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         out = self.conv2(out)
+        # out1 = out.clone()
+        # out2 = out.clone()
+        # f_out = torch.cat((out,out1),dim=1)
+        # f_out = torch.cat((f_out,out2),dim=1)
+        # x_3ch = torch.stack([out] * 3, dim=1)
         return out
 
 def enhance_contrast(images, clip=0.10):
@@ -155,7 +163,7 @@ class ExpansionConvNet(nn.Module):
 
         # Optimization layer
         self.conv_optimize = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, padding=1)
-        self.no_linear = nn.Sigmoid()
+        self.no_linear = nn.ReLU()
 
     def forward(self, x):
         # First channel
@@ -199,6 +207,66 @@ class DeflareNet(nn.Module):
 
         self.resnet18 = ResNet18(output_ch=3)
 
+        self.model_restoration = Uformer(img_size=512, img_ch=3, output_ch=3,embed_dim=44, depths=[2, 2, 2, 2, 2, 2, 2, 2, 2],num_heads=[1, 2, 4, 8, 16, 16, 8, 4, 2],
+                                    win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
+                                    drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
+                                    norm_layer=nn.LayerNorm, patch_norm=True,
+                                    use_checkpoint=False, token_projection='linear', token_mlp='ffn', se_layer=False,
+                                    dowsample=Downsample, upsample=Upsample)
+
+
+    # def forward(self,x):
+    #     """
+    #
+    #     Args:
+    #         x: O(x) = L(x) + F(x) + B(x)   带耀斑和光源的原图
+    #     Param:
+    #         output: B(x) + mask(x)  | 与 无损坏耀斑图像（删除本来有光源区域）比较
+    #                 L(x) + F(x)     | 与 Flare图像计算损失
+    #     Process:
+    #         1.Calculate O1(x) = O(x) - L(x) + mask(x) = mask(x) + F(x) + B(x)
+    #         2.Calculate diff(x) = O(x)(max - min)
+    #         3.Calculate B(x) + mask(x) = O(x) - F(x)
+    #     function
+    #     Returns:
+    #         output: 输出无耀斑 光源mask 图像 可以与GT 数据集中无耀斑 图像进行损失计算
+    #         light: 输出之后与 F(X) 相加获得 flare图像，进行损失计算
+    #     """
+    #
+    #     # 获得 去除光源的图像o1 和 和掩膜
+    #     self.x = x
+    #     self.o1,self.light_src = self._lightsrc_repby_mask(self.x)
+    #     light_src1 = None
+    #     light_src = None
+    #     # o1 = x
+    #     self.diff = self._calculate_diff_channel_batch(self.x)
+    #     self.reverse = 1 - self.diff
+    #
+    #     self.img_min = self._calculate_light_channel_batch(self.x)
+    #     self.img_max = self._calculate_light_channel_batch(self.x)
+    #
+    #     # 输入参数为带耀斑和光源的原图
+    #     # 差异通道卷积
+    #     self.conv_diff = self.diff_conv(self.o1)
+    #     self.conv_diff_2 = torch.pow(self.conv_diff,2)
+    #
+    #     self.mask_diff = (get_highlight_mask(self.conv_diff_2, threshold=0.08, luminance_mode=False) > 0.5).to("cuda:0", torch.bool)
+    #
+    #     self.x_diff = self.conv_diff_2
+    #
+    #     self.flare = self.resnet18(self.x_diff)
+    #
+    #     self.output = self.o1 - self.flare
+    #
+    #     self.output1 = torch.sigmoid(self.output)
+    #     if light_src != None:
+    #         self.light_src1 = torch.sigmoid(self.light_src)
+    #     self.flare1 = torch.relu(self.flare)
+    #
+    #     self.xjiandiff = self.o1 - self.flare1
+    #
+    #     return self.output1,light_src1,self.flare1
+    @autocast()
     def forward(self,x):
         """
 
@@ -218,51 +286,28 @@ class DeflareNet(nn.Module):
         """
 
         # 获得 去除光源的图像o1 和 和掩膜
-        o1,light_src = self._lightsrc_repby_mask(x)
-        light_src1 = None
-        # 这部分考虑 没有光源有耀斑情况
-        # if light_src == None:
-        #     return o1
-        # 球的差异通道
-        diff = self._calculate_diff_channel_batch(x)
-
+        self.x = x
+        # self.gt = gt
+        self.o1,self.light_src = self._lightsrc_repby_mask(self.x)
+        # self.light_src
+        # self.o1 = torch.pow(self.o1,3)
         # 输入参数为带耀斑和光源的原图
         # 差异通道卷积
-        diff = self.diff_conv(diff)
+        self.conv_diff = self.diff_conv(self.o1)
+        # self.conv_diff_2 = torch.pow(self.conv_diff,3)
 
-        x_diff = o1 / diff
+        self.flare = self.resnet18(self.conv_diff)
+        self.flare1 = torch.clamp(self.flare,0,1)
 
-        re_x_diff = self.resnet18(x_diff)
+        self.output = self.x - self.flare1
+        self.output1 = torch.clamp(self.output,0,1)
 
-        output = x_diff - re_x_diff
+        if self.light_src != None:
+            self.flare1 = self.flare1 + self.light_src
 
-        flare = o1 - output
-        output1 = torch.clamp(output,0,1)
-        if light_src != None:
-            light_src1 = torch.clamp(light_src,0,1)
-        flare1 = torch.clamp(flare,0,1)
+        self.output2 = self.model_restoration(self.output1)
 
-        return output1,light_src1,flare1
-
-    # def _calculate_dark_channel_batch(self,images):
-    #     B, C, H, W = images.shape
-    #     img = images.clone()
-    #     for b in range(B):
-    #         for i in range(H):
-    #             for j in range(W):
-    #                 min_rgb = img[b, :, i, j].min()
-    #                 img[b, :, i, j] = min_rgb
-    #     return img
-    #
-    # def _calculate_light_channel_batch(self,images):
-    #     B, C, H, W = images.shape
-    #     img = images.clone()
-    #     for b in range(B):
-    #         for i in range(H):
-    #             for j in range(W):
-    #                 max_rgb = img[b, :, i, j].max()
-    #                 img[b, :, i, j] = max_rgb
-    #     return img
+        return self.output2,self.light_src,self.flare1
 
     def _calculate_dark_channel_batch(self,images):
         min_rgb, _ = images.min(dim=1, keepdim=True)
@@ -285,6 +330,7 @@ class DeflareNet(nn.Module):
     # 用mask 替换 light source
     def _lightsrc_repby_mask(self,input_scene, pred_scene=None, threshold=0.99, luminance_mode=False):
         mask_rgb = None
+        self.light_src = None
 
         binary_mask = (get_highlight_mask(input_scene, threshold=threshold, luminance_mode=luminance_mode) > 0.5).to(
             "cpu", torch.bool)
@@ -312,12 +358,15 @@ class DeflareNet(nn.Module):
             # 获得去除光源的图像
             blend = input_scene - input_scene * mask_rgb
             # blend = input_scene - input_scene * mask_rgb + pred_scene * mask_rgb
+            self.light_src = input_scene * mask_rgb
+            self.light_src[self.light_src < 1e-2] = 1e-17
         else:
             blend = input_scene
+
         if mask_rgb == None:
             return blend,None
         else:
-            return blend,input_scene * mask_rgb
+            return blend,self.light_src
 
     # 对区域进行掩膜
     def mask_light_area(self,x,mask):
@@ -332,7 +381,69 @@ class DeflareNet(nn.Module):
 
         return x
 
+    def plot(self):
+        import matplotlib.pyplot as plt
+        plt.subplots(2,7)
 
+        plt.subplot(2,7,1)
+        plt.imshow(self.x.squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('x')
+
+        plt.subplot(2,7,2)
+        plt.imshow(self.o1.float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('o1')
+
+        plt.subplot(2,7,3)
+        plt.imshow((self.x - self.gt).float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('gt_flare + light')
+
+        plt.subplot(2,7,6)
+        plt.imshow(self.conv_diff.float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('conv_diff')
+
+        plt.subplot(2,7,7)
+        plt.imshow(self.conv_diff_2.float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('conv_diff_2')
+
+        plt.subplot(2,7,4)
+        plt.imshow((self.x - self.gt - self.light_src).float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('gt_flare')
+
+        plt.subplot(2,7,5)
+        plt.imshow(self.gt.float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('gt')
+
+
+        plt.subplot(2,7,8)
+        plt.imshow((self.output1).float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('predict with light')
+
+        plt.subplot(2,7,9)
+        plt.imshow(self.output.float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('predict without light')
+
+        # plt.subplot(2,7,10)
+        # plt.imshow((self.output1 - self.gt).squeeze(0).detach().cpu().permute(1, 2, 0))
+        # plt.title('flare')
+
+        plt.subplot(2,7,11)
+        plt.imshow((self.output - self.gt).float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('flare1')
+
+        plt.subplot(2,7,12)
+        plt.imshow((self.x - self.gt - self.light_src - (self.output - self.gt)).float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('output')
+        #
+        # if self.light_src != None:
+        plt.subplot(2,7,13)
+        plt.imshow(self.flare.float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('flare')
+        #
+        plt.subplot(2, 7, 14)
+        plt.imshow((self.x - self.gt - (self.output - self.gt)).float().squeeze(0).detach().cpu().permute(1, 2, 0))
+        plt.title('xjiandiff')
+
+        plt.show()
 
 if __name__ == "__main__":
     arch = DeflareNet()
