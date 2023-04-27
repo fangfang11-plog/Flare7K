@@ -213,7 +213,12 @@ class DeflareNet(nn.Module):
                                     norm_layer=nn.LayerNorm, patch_norm=True,
                                     use_checkpoint=False, token_projection='linear', token_mlp='ffn', se_layer=False,
                                     dowsample=Downsample, upsample=Upsample)
-
+        self.model_restoration_flare = Uformer(img_size=512, img_ch=3, output_ch=3,embed_dim=44, depths=[2, 2, 2, 2, 2, 2, 2, 2, 2],num_heads=[1, 2, 4, 8, 16, 16, 8, 4, 2],
+                                    win_size=8, mlp_ratio=4., qkv_bias=True, qk_scale=None,
+                                    drop_rate=0., attn_drop_rate=0., drop_path_rate=0.1,
+                                    norm_layer=nn.LayerNorm, patch_norm=True,
+                                    use_checkpoint=False, token_projection='linear', token_mlp='ffn', se_layer=False,
+                                    dowsample=Downsample, upsample=Upsample)
 
     # def forward(self,x):
     #     """
@@ -306,6 +311,8 @@ class DeflareNet(nn.Module):
             self.flare1 = self.flare1 + self.light_src
 
         self.output2 = self.model_restoration(self.output1)
+
+        self.flare1 = self.model_restoration_flare(self.flare1)
 
         return self.output2,self.light_src,self.flare1
 
